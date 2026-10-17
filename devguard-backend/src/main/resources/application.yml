@@ -1,0 +1,24 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  datasource:
+  driver-class-name: com.mysql.cj.jdbc.Driver
+  url: jdbc:mysql://127.0.0.1:3306/devguard?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/shanghai&useSSL=false
+  username: root
+  password: 7299018
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  database: 0
+  timeout: 3000
+
+mybatis:
+  mapper-location: classpath:mapper/*.xml
+  type-aliases-package: com.devguard.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.stdOutImpl
