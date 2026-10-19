@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.devguard.mapper.AgentTaskMapper">
+
+<insert id="insert" parameterType="com.devguard.entity.AgentTask" useGeneratedKeys="true" keyProperty="id">
+	insert into agent_task(task_name,task_type, status, priority, timeout_seconds, input_content, created_by)
+        VALUES (#{taskName}, #{taskType}, #{status}, #{priority}, #{timeoutSeconds}, #{inputContent}, #{createdBy})
+</insert>
+
+<select id="selectById" resultType="com.devguard.entity.AgentTask">
+select * from agent_task where id =#{id}
+</select>
+
+<update id="updateById" parameterType="com.devguard.entity.AgentTask">
+update agent_task
+	<set>
+	<if test="status != null">status = #{status},</if>
+            <if test="resultSummary != null">result_summary = #{resultSummary},</if>
+            <if test="startedAt != null">started_at = #{startedAt},</if>
+            <if test="finishedAt != null">finished_at = #{finishedAt},</if>
+        </set>
+where id=#{id}
+</update>
+
+<select id="selectPendingTask" resultType="com.devguard.entity.AgentTask">
+select * from agent_task
+where status = 'Pending'
+order by priority desc, created_at asc
+</select>
