@@ -20,6 +20,6 @@ public class AgentSubTask{
 	private LocalDateTime finishedAt;
 	private Long durationMs;
 	private LocalDateTime createdAt;
-
+	private LocalDateTime updatedAt;
 }
 

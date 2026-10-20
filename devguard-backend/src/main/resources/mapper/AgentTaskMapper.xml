@@ -23,8 +23,9 @@ update agent_task
 where id=#{id}
 </update>
 
-<select id="selectPendingTask" resultType="com.devguard.entity.AgentTask">
+<select id="selectPendingTasks" resultType="com.devguard.entity.AgentTask">
 select * from agent_task
 where status = 'Pending'
 order by priority desc, created_at asc
 </select>
+</mapper>

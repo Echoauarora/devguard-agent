@@ -26,7 +26,7 @@ public class TaskService {
 @Transactional(rollbackFor = Exception.class)
 public Long createTask(AgentTask task){
 	//先填充主任务的默认值
-	task.setStatus("任务待定");
+	task.setStatus("PENDING");
 	task.setCreatedAt(LocalDateTime.now());
 	task.setUpdatedAt(LocalDateTime.now());
 	if(task.getPriority() == null){
@@ -89,13 +89,16 @@ public List<AgentSubTask> initDefaultSubTasks(Long taskId,String taskType){
 
 	List<AgentSubTask> subTaskList = new ArrayList();
 	int step = 1;
+	LocalDateTime now = LocalDateTime.now();
 //第一步，先代码解析
 	AgentSubTask parseStep = new AgentSubTask();
 	parseStep.setTaskId(taskId);
 	parseStep.setStepOrder(step++);
 	parseStep.setSubTaskName("代码解析");
 	parseStep.setSubTaskType("code_parse");
-	parseStep.setStatus("任务待定");
+	parseStep.setStatus("PENDING");
+	parseStep.setCreatedAt(now);
+	parseStep.setUpdatedAt(now);
 	subTaskList.add(parseStep);
 //漏洞扫描。缺陷修复类任务，增加漏洞扫描步骤
 
@@ -105,7 +108,9 @@ public List<AgentSubTask> initDefaultSubTasks(Long taskId,String taskType){
 	scanStep.setStepOrder(step++);
 	scanStep.setSubTaskName("漏洞扫描");
 	scanStep.setSubTaskType("scan");
-	scanStep.setStatus("任务待定");
+	scanStep.setStatus("PENDING");
+	scanStep.setCreatedAt(now);
+	scanStep.setUpdatedAt(now);
 	subTaskList.add(scanStep);
 }
 //最后一步结果生成
@@ -114,10 +119,28 @@ public List<AgentSubTask> initDefaultSubTasks(Long taskId,String taskType){
 	generateStep.setStepOrder(step);
 	generateStep.setSubTaskName("结果生成");
 	generateStep.setSubTaskType("generate");
-	generateStep.setStatus("任务待定");
+	generateStep.setStatus("PENDING");
+	generateStep.setCreatedAt(now);
+	generateStep.setUpdatedAt(now);
 	subTaskList.add(generateStep);
 
 	return subTaskList;
 }
+
+/**
+     * 查询指定任务的所有子任务，按步骤序号排序
+     */
+    public List<AgentSubTask> listSubTasksByTaskId(Long taskId) {
+        return subTaskMapper.selectByTaskId(taskId);
+    }
+
+    /**
+     * 更新子任务状态与执行结果
+     */
+    public int updateSubTask(AgentSubTask subTask) {
+        subTask.setUpdatedAt(LocalDateTime.now());
+        return subTaskMapper.updateById(subTask);
+    }
+
 }
 

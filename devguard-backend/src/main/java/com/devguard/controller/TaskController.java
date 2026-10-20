@@ -4,13 +4,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import com.devguard.entity.AgentTask;
 import com.devguard.service.TaskService;
+import com.devguard.entity.AgentSubTask;
 
 import java.util.List;
 
 
 //用来接受请求，转发参数，结果返回，不包含业务逻辑
 @RestController
-@RequestMapping("/api/task")
+@RequestMapping("/task")
 public class TaskController{
 
 @Autowired
@@ -50,4 +51,15 @@ public int updateTaskStatus(@PathVariable Long id,@RequestParam String status){
 
 	return taskService.updateTaskStatus(id,status);
 }
+@GetMapping("/{id}/subtasks")
+    public List<AgentSubTask> listSubTasks(@PathVariable Long id) {
+        return taskService.listSubTasksByTaskId(id);
+    }
+
+   // 更新子任务状态与执行结果
+    @PutMapping("/subtask/{id}")
+    public int updateSubTask(@PathVariable Long id, @RequestBody AgentSubTask subTask) {
+        subTask.setId(id);
+        return taskService.updateSubTask(subTask);
+    }
 }
