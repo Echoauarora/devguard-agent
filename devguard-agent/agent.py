@@ -1,6 +1,6 @@
 import time
 from api import TaskApi, ms_to_iso
-
+from code_analyzer import JavaCodeAnalyzer
 
 class TaskExecutor:
     def __init__(self):
@@ -83,19 +83,54 @@ class TaskExecutor:
             self.api.update_task_status(task_id, "FAILED", duration_ms=total_duration)
 
 
-    def _run_sub_task(self, sub_type, input_content):
+    def _run_sub_task(self, sub_type: str, code: str) -> str:
+        """根据子任务类型执行对应逻辑，返回结果字符串"""
+        
         if sub_type == "code_parse":
-            lines = input_content.strip().split("\n")
-            return f"解析完成：共 {len(lines)} 行代码，检测到类定义"
+            # 代码解析阶段：真实静态分析
+            analyzer = JavaCodeAnalyzer(code)
+            result = analyzer.analyze()
+            
+            output = "=== 代码解析结果 ===\n"
+            output += f"总行数：{result['total_lines']}\n"
+            output += f"有效代码行数：{result['effective_lines']}\n"
+            output += f"类数量：{result['class_count']}\n"
+            output += f"类名：{', '.join(result['class_names'])}\n"
+            output += f"方法数量：{result['method_count']}\n"
+            for idx, method in enumerate(result['methods'], 1):
+                output += f"  方法{idx}：{method['name']}({method['params']})\n"
+            return output
 
         elif sub_type == "scan":
-            return "扫描完成：未发现高危漏洞，1 个低危告警（命名不规范）"
+            # 漏洞扫描阶段：基于分析结果做问题检测
+            analyzer = JavaCodeAnalyzer(code)
+            issues = analyzer.check_simple_issues()
+            
+            output = "=== 漏洞扫描结果 ===\n"
+            if not issues:
+                output += "未检测到基础代码问题\n"
+            else:
+                for idx, issue in enumerate(issues, 1):
+                    output += f"问题{idx}：{issue}\n"
+            return output
 
         elif sub_type == "generate":
-            return "生成完成：已输出完整诊断报告"
+            # 结果生成阶段：汇总信息
+            analyzer = JavaCodeAnalyzer(code)
+            result = analyzer.analyze()
+            issues = result['issues']
+            
+            output = "=== 扫描任务总结 ===\n"
+            output += f"代码规模：{result['effective_lines']} 行有效代码\n"
+            output += f"包含 {result['class_count']} 个类，{result['method_count']} 个方法\n"
+            output += f"检测到 {len(issues)} 个基础问题\n"
+            if issues:
+                output += "主要问题：" + "；".join(issues[:2]) + "\n"
+            output += "扫描完成"
+            return output
 
         else:
-            return f"未知任务类型: {sub_type}"
+            return f"未知子任务类型：{sub_type}"
 
 
 if __name__ == "__main__":
