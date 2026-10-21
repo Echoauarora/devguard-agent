@@ -33,5 +33,9 @@
         </set>
         WHERE id = #{id}
     </update>
+    <!-- 根据ID查询子任务 -->
+    <select id="selectById" parameterType="long" resultType="com.devguard.entity.AgentSubTask">
+        SELECT * FROM agent_sub_task WHERE id = #{id}
+    </select>
 
 </mapper>

@@ -2,7 +2,7 @@ import time
 import concurrent.futures
 from api import TaskApi, ms_to_iso
 from code_analyzer import JavaCodeAnalyzer
-
+from redis_lock import RedisDistributedLock
 
 class TimeoutError(Exception):
     """子任务执行超时异常"""
@@ -14,6 +14,7 @@ class TaskExecutor:
         self.poll_interval = 3
         self.max_retry = 3        # 单个子任务最大重试次数
         self.subtask_timeout = 30  # 单个子任务超时阈值，单位秒
+        self.lock = RedisDistributedLock()  # 分布式任务锁
 
     def run(self):
         print("Agent 启动成功，开始轮询任务...")
@@ -23,13 +24,32 @@ class TaskExecutor:
                 if not pending_tasks:
                     time.sleep(self.poll_interval)
                     continue
+                # 遍历待办任务，尝试抢锁
+                task = None
+                for t in pending_tasks:
+                    task_id = t["id"]
+                    if self.lock.try_lock(task_id):
+                        task = t
+                        break
 
-                task = pending_tasks[0]
+                if not task:
+                    # 所有任务都被其他 Agent 锁定，等待下一轮
+                    time.sleep(self.poll_interval)
+                    continue
+
                 task_id = task["id"]
                 task_type = task["taskType"]
                 print(f"\n抢到任务: ID={task_id}, 类型={task_type}")
 
+                # 拿到锁后再更新状态
                 lock_success = self.api.update_task_status(task_id, "RUNNING")
+
+          #      task = pending_tasks[0]
+          #     task_id = task["id"]
+          #    task_type = task["taskType"]
+          #       print(f"\n抢到任务: ID={task_id}, 类型={task_type}")
+
+          #      lock_success = self.api.update_task_status(task_id, "RUNNING")
                 if not lock_success:
                     print(f"任务 {task_id} 锁定失败，可能被其他 Agent 抢走了")
                     time.sleep(self.poll_interval)
@@ -141,6 +161,9 @@ class TaskExecutor:
                     total_duration = task_end_ms - task_start_ms
                     print(f"任务 {task_id} 因子任务失败终止")
                     self.api.update_task_status(task_id, "FAILED", duration_ms=total_duration)
+
+                    self.lock.unlock(task_id)
+
                     return
 
 
@@ -150,6 +173,7 @@ class TaskExecutor:
             total_duration = task_end_ms - task_start_ms
             self.api.update_task_status(task_id, "SUCCESS", duration_ms=total_duration)
             print(f"任务 {task_id} 全部执行完成，总耗时 {total_duration}ms")
+            self.lock.unlock(task_id)
 
         except Exception as e:
             # 任务失败：同样记录总耗时

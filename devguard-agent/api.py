@@ -42,19 +42,43 @@ class TaskApi:
             return result.get("data", [])
         return []
 
-    def update_sub_task(self, sub_task_id, status, output_content=None, error_msg=None,
-                       started_at=None, finished_at=None, duration_ms=None):
-        url = f"{self.base_url}/task/subtask/{sub_task_id}"
-        body = {
-            "status": status,
-            "outputContent": output_content,
-            "errorMsg": error_msg,
-            "startedAt": started_at,
-            "finishedAt": finished_at,
-            "durationMs": duration_ms
-        }
+#    def update_sub_task(self, sub_task_id, status, output_content=None, error_msg=None,
+#                      started_at=None, finished_at=None, duration_ms=None):
+#        url = f"{self.base_url}/task/subtask/{sub_task_id}"
+#        body = {
+#           "status": status,
+#            "outputContent": output_content,
+#            "errorMsg": error_msg,
+#            "startedAt": started_at,
+#            "finishedAt": finished_at,
+#            "durationMs": duration_ms
+#        }
         # 过滤空值，只更新有值的字段，避免覆盖数据库已有数据
-        body = {k: v for k, v in body.items() if v is not None}
+#        body = {k: v for k, v in body.items() if v is not None}
+#        resp = requests.put(url, json=body)
+#        result = resp.json()
+#        return result.get("code") == 200
+    def update_sub_task(self, sub_id, status, output_content=None, error_msg=None,
+                       started_at=None, finished_at=None, duration_ms=None, retry_count=None):
+        """
+        更新子任务信息，支持重试次数、错误信息
+        """
+        url = f"{self.base_url}/task/subtask/{sub_id}"
+        body = {"status": status}
+        
+        if output_content is not None:
+            body["outputContent"] = output_content
+        if error_msg is not None:
+            body["errorMsg"] = error_msg
+        if started_at is not None:
+            body["startedAt"] = started_at
+        if finished_at is not None:
+            body["finishedAt"] = finished_at
+        if duration_ms is not None:
+            body["durationMs"] = duration_ms
+        if retry_count is not None:
+            body["retryCount"] = retry_count
+        
         resp = requests.put(url, json=body)
         result = resp.json()
         return result.get("code") == 200
