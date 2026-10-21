@@ -11,4 +11,6 @@ public interface AgentSubTaskMapper{
 
 	int updateById(AgentSubTask subTask);
 
+	AgentSubTask selectById(Long id);
+
 }

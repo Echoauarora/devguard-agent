@@ -80,10 +80,13 @@ List<AgentSubTask> subTasks = taskService.listSubTasksByTaskId(id);
 
    // 更新子任务状态与执行结果
     @PutMapping("/subtask/{id}")
-    public Result<Integer> updateSubTask(@PathVariable Long id, @RequestBody AgentSubTask subTask) {
+    public Result<Void> updateSubTask(@PathVariable Long id, @RequestBody AgentSubTask subTask) {
         subTask.setId(id);
         //return taskService.updateSubTask(subTask);
-	 int row = taskService.updateSubTask(subTask);
-	return Result.success(row);
+	 //int row = taskService.updateSubTask(subTask);
+	//return Result.success(row);
+
+	taskService.updateSubTask(subTask);
+	return Result.success(null);
 }
 }

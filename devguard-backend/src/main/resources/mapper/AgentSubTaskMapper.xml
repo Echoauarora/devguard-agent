@@ -28,7 +28,8 @@
             <if test="startedAt != null">started_at = #{startedAt},</if>
             <if test="finishedAt != null">finished_at = #{finishedAt},</if>
             <if test="durationMs != null">duration_ms = #{durationMs},</if>
-            updated_at = NOW()
+            <if test="retryCount != null">retry_count = #{retryCount},</if> 
+           updated_at = NOW()
         </set>
         WHERE id = #{id}
     </update>

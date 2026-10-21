@@ -11,9 +11,24 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.Set;
+import java.util.HashSet;
+
 @Service
 
 public class TaskService {
+
+//private static final Set<String> VALID_SUBTASK_STATUSES = new HashSet<>(Set.of("PENDING", "RUNNING", "SUCCESS", "FAILED"));
+//private static final Set<String> FINAL_SUBTASK_STATUSES = new HashSet<>(Set.of("SUCCESS", "FAILED"));
+
+    // 合法状态枚举
+    private static final Set<String> VALID_SUBTASK_STATUSES = new java.util.HashSet<>(java.util.Set.of("PENDING", "RUNNING", "SUCCESS", "FAILED"));
+    private static final Set<String> FINAL_SUBTASK_STATUSES = new java.util.HashSet<>(java.util.Set.of("SUCCESS", "FAILED"));
+    private static final Set<String> VALID_TASK_STATUSES = new java.util.HashSet<>(java.util.Set.of("PENDING", "RUNNING", "SUCCESS", "FAILED"));
+    private static final Set<String> FINAL_TASK_STATUSES = new java.util.HashSet<>(java.util.Set.of("SUCCESS", "FAILED"));
+
+
+
 
 	@Autowired
 	private AgentTaskMapper taskMapper;
@@ -59,6 +74,31 @@ public AgentTask getTaskById(Long id){
 
 // 更新任务的状态，自动记录开始/结束时间，支持传入总耗时
 public int updateTaskStatus(Long taskId, String status, Long durationMs) {
+
+// 1. 基础参数校验
+        if (taskId == null) {
+            throw new IllegalArgumentException("任务ID不能为空");
+        }
+        if (!VALID_TASK_STATUSES.contains(status)) {
+            throw new IllegalArgumentException("非法的任务状态: " + status);
+        }
+
+        // 2. 状态流转合法性校验
+        AgentTask oldTask = taskMapper.selectById(taskId);
+        if (oldTask == null) {
+            throw new IllegalArgumentException("任务不存在: " + taskId);
+        }
+
+        // 终态不可变更原则
+        if (FINAL_TASK_STATUSES.contains(oldTask.getStatus())) {
+            // 幂等兼容：相同状态重复调用直接返回
+            if (oldTask.getStatus().equals(status)) {
+                return 0;
+            }
+            throw new IllegalStateException("终态任务不可修改状态，当前状态: " + oldTask.getStatus());
+        }
+
+
     AgentTask task = new AgentTask();
     task.setId(taskId);
     task.setStatus(status);
@@ -66,9 +106,9 @@ public int updateTaskStatus(Long taskId, String status, Long durationMs) {
 
     // 状态流转时自动记录对应的时间节点
     if ("RUNNING".equals(status)) {
-        task.setStartedAt(LocalDateTime.now());
+        task.setStartedAt(java.time.LocalDateTime.now());
     } else if ("SUCCESS".equals(status) || ("FAILED".equals(status))) {
-        task.setFinishedAt(LocalDateTime.now());
+        task.setFinishedAt(java.time.LocalDateTime.now());
     }
 
     return taskMapper.updateById(task);
@@ -143,10 +183,39 @@ public List<AgentSubTask> initDefaultSubTasks(Long taskId,String taskType){
     /**
      * 更新子任务状态与执行结果
      */
-    public int updateSubTask(AgentSubTask subTask) {
-        subTask.setUpdatedAt(LocalDateTime.now());
-        return subTaskMapper.updateById(subTask);
-    }
+    public void updateSubTask(AgentSubTask subTask) {
+        //subTask.setUpdatedAt(LocalDateTime.now());
+        //return subTaskMapper.updateById(subTask);
+	 //参数校验
+	if(subTask.getId()==null){
+	throw new IllegalArgumentException("子任务id不能为空");
+
+}
+	if(subTask.getStatus()!=null && !VALID_SUBTASK_STATUSES.contains(subTask.getStatus())){
+
+	throw new IllegalArgumentException("非法的子任务状态："+subTask.getStatus());
+}
+	if(subTask.getRetryCount()!=null && subTask.getRetryCount()<0){
+
+	throw new IllegalArgumentException("重试次数不能为负数");
+}
+	//状态流转合法性检验
+
+	AgentSubTask oldTask = subTaskMapper.selectById(subTask.getId());
+	if (oldTask == null){
+	throw new IllegalArgumentException("子任务不存在："+subTask.getId());
+}
+//最终的状态不可变
+	if(FINAL_SUBTASK_STATUSES.contains(oldTask.getStatus())){
+		if(oldTask.getStatus().equals(subTask.getStatus())){
+			return;
+}
+	throw new IllegalStateException("终态的子任务不可修改状态，当前的状态："+ oldTask.getStatus());
+}
+//subTaskMapper.updateById(subTask);
+// 3. 合法则执行更新
+subTaskMapper.updateById(subTask);
+}
 
 }
 

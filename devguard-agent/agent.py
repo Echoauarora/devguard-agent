@@ -1,11 +1,19 @@
 import time
+import concurrent.futures
 from api import TaskApi, ms_to_iso
 from code_analyzer import JavaCodeAnalyzer
+
+
+class TimeoutError(Exception):
+    """子任务执行超时异常"""
+    pass
 
 class TaskExecutor:
     def __init__(self):
         self.api = TaskApi()
         self.poll_interval = 3
+        self.max_retry = 3        # 单个子任务最大重试次数
+        self.subtask_timeout = 30  # 单个子任务超时阈值，单位秒
 
     def run(self):
         print("Agent 启动成功，开始轮询任务...")
@@ -32,6 +40,29 @@ class TaskExecutor:
             except Exception as e:
                 print(f"执行异常: {e}")
                 time.sleep(self.poll_interval)
+
+    def _run_with_timeout(self, func, *args, timeout=None):
+        """带超时控制执行函数，超时抛出 TimeoutError"""
+        if timeout is None:
+            timeout = self.subtask_timeout
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(func, *args)
+            try:
+                return future.result(timeout=timeout)
+            except concurrent.futures.TimeoutError:
+                future.cancel()
+                raise TimeoutError(f"执行超时，超过 {timeout} 秒")
+
+    def _is_retryable_error(self, e: Exception) -> bool:
+        """判断异常是否可重试：网络/超时类可重试；业务逻辑/语法错误不可重试"""
+        if isinstance(e, TimeoutError):
+            return True
+        error_msg = str(e).lower()
+        retryable_keywords = ["timeout", "connection", "network", "500", "502", "503"]
+        return any(keyword in error_msg for keyword in retryable_keywords)
+
+
     def _execute_task(self, task):
         task_id = task["id"]
         # 记录主任务本地开始时间，用于计算总耗时
@@ -44,30 +75,75 @@ class TaskExecutor:
 
             sub_tasks.sort(key=lambda x: x["stepOrder"])
 
+
             for sub_task in sub_tasks:
                 sub_id = sub_task["id"]
                 sub_name = sub_task["subTaskName"]
                 sub_type = sub_task["subTaskType"]
+                retry_count = 0
+                success = False
+                last_error = None
+
                 print(f"  执行子任务: {sub_name} ({sub_type})")
 
-                # 子任务开始：记录时间并回写
-                sub_start_ms = int(time.time() * 1000)
-                sub_start_iso = ms_to_iso(sub_start_ms)
-                self.api.update_sub_task(sub_id, "RUNNING", started_at=sub_start_iso)
+                while retry_count <= self.max_retry:
+                    try:
+                        # 子任务开始：记录时间并回写
+                        sub_start_ms = int(time.time() * 1000)
+                        sub_start_iso = ms_to_iso(sub_start_ms)
+                        self.api.update_sub_task(sub_id, "RUNNING",
+                                                started_at=sub_start_iso,
+                                                retry_count=retry_count)
 
-                # 执行业务逻辑
-                output = self._run_sub_task(sub_type, task.get("inputContent", ""))
+                        # 带超时执行业务逻辑
+                        output = self._run_with_timeout(
+                            self._run_sub_task, sub_type, task.get("inputContent", "")
+                        )
 
-                # 子任务结束：计算耗时并回写结果+时间
-                sub_end_ms = int(time.time() * 1000)
-                sub_end_iso = ms_to_iso(sub_end_ms)
-                duration_ms = sub_end_ms - sub_start_ms
+                        # 子任务成功结束
+                        sub_end_ms = int(time.time() * 1000)
+                        sub_end_iso = ms_to_iso(sub_end_ms)
+                        duration_ms = sub_end_ms - sub_start_ms
 
-                self.api.update_sub_task(sub_id, "SUCCESS",
-                                        output_content=output,
-                                        finished_at=sub_end_iso,
-                                        duration_ms=duration_ms)
-                print(f"  子任务完成: {sub_name}，耗时 {duration_ms}ms")
+                        self.api.update_sub_task(sub_id, "SUCCESS",
+                                                output_content=output,
+                                                finished_at=sub_end_iso,
+                                                duration_ms=duration_ms,
+                                                retry_count=retry_count)
+                        print(f"  子任务完成: {sub_name}，耗时 {duration_ms}ms，重试 {retry_count} 次")
+                        success = True
+                        break
+
+                    except Exception as e:
+                        last_error = str(e)
+                        retry_count += 1
+                        print(f"  子任务 {sub_name} 失败(第{retry_count}次): {e}")
+
+                        # 判断是否可重试
+                        if not self._is_retryable_error(e) or retry_count > self.max_retry:
+                            # 最终失败，记录错误信息
+                            sub_end_ms = int(time.time() * 1000)
+                            sub_end_iso = ms_to_iso(sub_end_ms)
+                            duration_ms = sub_end_ms - sub_start_ms
+                            self.api.update_sub_task(sub_id, "FAILED",
+                                                    error_msg=last_error,
+                                                    finished_at=sub_end_iso,
+                                                    duration_ms=duration_ms,
+                                                    retry_count=retry_count - 1)
+                            print(f"  子任务 {sub_name} 最终失败，累计重试 {retry_count-1} 次")
+                            break
+                        # 重试间隔 1 秒，避免打爆接口
+                        time.sleep(1)
+
+                if not success:
+                    # 单个子任务失败，整个任务标记失败
+                    task_end_ms = int(time.time() * 1000)
+                    total_duration = task_end_ms - task_start_ms
+                    print(f"任务 {task_id} 因子任务失败终止")
+                    self.api.update_task_status(task_id, "FAILED", duration_ms=total_duration)
+                    return
+
+
 
             # 主任务成功结束：计算总耗时并回写
             task_end_ms = int(time.time() * 1000)
