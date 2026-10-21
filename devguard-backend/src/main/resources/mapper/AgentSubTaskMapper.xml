@@ -4,11 +4,12 @@
 <mapper namespace="com.devguard.mapper.AgentSubTaskMapper">
 
     <!-- 批量插入子任务 -->
+    <!-- 批量插入子任务 -->
     <insert id="batchInsert" parameterType="java.util.List" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO agent_sub_task (task_id, step_order, sub_task_name, sub_task_type, status, input_content, output_content, error_msg, created_at, updated_at)
+        INSERT INTO agent_sub_task (task_id, step_order, sub_task_name, sub_task_type, status)
         VALUES
         <foreach collection="list" item="item" separator=",">
-            (#{item.taskId}, #{item.stepOrder}, #{item.subTaskName}, #{item.subTaskType}, #{item.status}, #{item.inputContent}, #{item.outputContent}, #{item.errorMsg}, #{item.createdAt}, #{item.updatedAt})
+            (#{item.taskId}, #{item.stepOrder}, #{item.subTaskName}, #{item.subTaskType}, #{item.status})
         </foreach>
     </insert>
 
@@ -17,17 +18,17 @@
         SELECT * FROM agent_sub_task WHERE task_id = #{taskId} ORDER BY step_order ASC
     </select>
 
-    <!-- 更新子任务状态与结果 -->
+    <!-- 更新子任务信息 -->
     <update id="updateById" parameterType="AgentSubTask">
         UPDATE agent_sub_task
         <set>
             <if test="status != null">status = #{status},</if>
             <if test="outputContent != null">output_content = #{outputContent},</if>
             <if test="errorMsg != null">error_msg = #{errorMsg},</if>
-            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
             <if test="startedAt != null">started_at = #{startedAt},</if>
             <if test="finishedAt != null">finished_at = #{finishedAt},</if>
             <if test="durationMs != null">duration_ms = #{durationMs},</if>
+            updated_at = NOW()
         </set>
         WHERE id = #{id}
     </update>

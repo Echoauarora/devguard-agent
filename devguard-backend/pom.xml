@@ -33,6 +33,12 @@
 			<artifactId>mybatis-spring-boot-starter</artifactId>
 			<version>${mybatis.version}</version>
 		</dependency>
+                                <!-- MyBatis JSR310 时间类型处理器 -->
+                <dependency>
+                        <groupId>org.mybatis</groupId>
+                        <artifactId>mybatis-typehandlers-jsr310</artifactId>
+                        <version>1.0.2</version>
+                </dependency>
 
 		<dependency>
 			<groupId>com.mysql</groupId>

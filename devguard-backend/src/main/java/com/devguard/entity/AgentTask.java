@@ -19,5 +19,6 @@ public class AgentTask {
 	private LocalDateTime finishedAt;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
+        private Long durationMs;
 
 }

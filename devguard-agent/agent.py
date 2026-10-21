@@ -1,5 +1,5 @@
 import time
-from api import TaskApi
+from api import TaskApi, ms_to_iso
 
 
 class TaskExecutor:
@@ -32,9 +32,10 @@ class TaskExecutor:
             except Exception as e:
                 print(f"执行异常: {e}")
                 time.sleep(self.poll_interval)
-
     def _execute_task(self, task):
         task_id = task["id"]
+        # 记录主任务本地开始时间，用于计算总耗时
+        task_start_ms = int(time.time() * 1000)
         try:
             sub_tasks = self.api.get_sub_tasks(task_id)
             if not sub_tasks:
@@ -49,17 +50,38 @@ class TaskExecutor:
                 sub_type = sub_task["subTaskType"]
                 print(f"  执行子任务: {sub_name} ({sub_type})")
 
-                self.api.update_sub_task(sub_id, "RUNNING")
-                output = self._run_sub_task(sub_type, task.get("inputContent", ""))
-                self.api.update_sub_task(sub_id, "SUCCESS", output_content=output)
-                print(f"  子任务完成: {sub_name}")
+                # 子任务开始：记录时间并回写
+                sub_start_ms = int(time.time() * 1000)
+                sub_start_iso = ms_to_iso(sub_start_ms)
+                self.api.update_sub_task(sub_id, "RUNNING", started_at=sub_start_iso)
 
-            self.api.update_task_status(task_id, "SUCCESS")
-            print(f"任务 {task_id} 全部执行完成")
+                # 执行业务逻辑
+                output = self._run_sub_task(sub_type, task.get("inputContent", ""))
+
+                # 子任务结束：计算耗时并回写结果+时间
+                sub_end_ms = int(time.time() * 1000)
+                sub_end_iso = ms_to_iso(sub_end_ms)
+                duration_ms = sub_end_ms - sub_start_ms
+
+                self.api.update_sub_task(sub_id, "SUCCESS",
+                                        output_content=output,
+                                        finished_at=sub_end_iso,
+                                        duration_ms=duration_ms)
+                print(f"  子任务完成: {sub_name}，耗时 {duration_ms}ms")
+
+            # 主任务成功结束：计算总耗时并回写
+            task_end_ms = int(time.time() * 1000)
+            total_duration = task_end_ms - task_start_ms
+            self.api.update_task_status(task_id, "SUCCESS", duration_ms=total_duration)
+            print(f"任务 {task_id} 全部执行完成，总耗时 {total_duration}ms")
 
         except Exception as e:
+            # 任务失败：同样记录总耗时
+            task_end_ms = int(time.time() * 1000)
+            total_duration = task_end_ms - task_start_ms
             print(f"任务 {task_id} 执行失败: {e}")
-            self.api.update_task_status(task_id, "FAILED")
+            self.api.update_task_status(task_id, "FAILED", duration_ms=total_duration)
+
 
     def _run_sub_task(self, sub_type, input_content):
         if sub_type == "code_parse":

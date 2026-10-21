@@ -7,7 +7,7 @@ import com.devguard.service.TaskService;
 import com.devguard.entity.AgentSubTask;
 import com.devguard.common.Result;
 import java.util.List;
-
+import java.time.LocalDateTime;
 
 //用来接受请求，转发参数，结果返回，不包含业务逻辑
 @RestController
@@ -54,15 +54,16 @@ public Result<List<AgentTask>> listPendingTasks(){
 }
 
 //更新任务的状态，包含id，目标状态，影响的 行数
-
+//更新任务的状态，包含id，目标状态，总耗时；开始/结束时间由后端自动生成
 @PutMapping("/{id}/status")
-public Result<Integer> updateTaskStatus(@PathVariable Long id,@RequestParam String status){
-
-	//return taskService.updateTaskStatus(id,status);
-	int row = taskService.updateTaskStatus(id,status);
-	return Result.success(row);
-
+public Result<Void> updateStatus(@PathVariable Long id,
+                                  @RequestParam String status,
+                                  @RequestParam(required = false) Long durationMs) {
+    taskService.updateTaskStatus(id, status, durationMs);
+    return Result.success(null);
 }
+
+
 @GetMapping("/{id}/subtasks")
     public Result<List<AgentSubTask>> listSubTasks(@PathVariable Long id) {
         //return taskService.listSubTasksByTaskId(id);

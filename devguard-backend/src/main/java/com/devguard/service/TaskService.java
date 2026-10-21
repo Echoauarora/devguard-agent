@@ -57,21 +57,27 @@ public AgentTask getTaskById(Long id){
 
 //更新任务的状态，自动记录开始/结束，封装状态运转的逻辑
 
-public int updateTaskStatus(Long taskId, String status){
-	AgentTask task = new AgentTask();
-	task.setId(taskId);
-	task.setStatus(status);
-	//状态流转时自动记录对应的时间节点
-	if("正在运行中".equals(status)){
+// 更新任务的状态，自动记录开始/结束时间，支持传入总耗时
+public int updateTaskStatus(Long taskId, String status, Long durationMs) {
+    AgentTask task = new AgentTask();
+    task.setId(taskId);
+    task.setStatus(status);
+    task.setDurationMs(durationMs);
 
-	task.setStartedAt(LocalDateTime.now());
-}	else if("成功".equals(status) || "失败".equals(status)){
-	task.setFinishedAt(LocalDateTime.now());
+    // 状态流转时自动记录对应的时间节点
+    if ("RUNNING".equals(status)) {
+        task.setStartedAt(LocalDateTime.now());
+    } else if ("SUCCESS".equals(status) || ("FAILED".equals(status))) {
+        task.setFinishedAt(LocalDateTime.now());
+    }
+
+    return taskMapper.updateById(task);
 }
-	return taskMapper.updateById(task);
+
+// 重载方法：兼容只传状态的旧调用
+public int updateTaskStatus(Long taskId, String status) {
+    return updateTaskStatus(taskId, status, null);
 }
-
-
 
 
 //获取待执行的任务，按照优先级降序，创建时间升序

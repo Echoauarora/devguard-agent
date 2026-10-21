@@ -3,29 +3,36 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.devguard.mapper.AgentTaskMapper">
 
-<insert id="insert" parameterType="com.devguard.entity.AgentTask" useGeneratedKeys="true" keyProperty="id">
-	insert into agent_task(task_name,task_type, status, priority, timeout_seconds, input_content, created_by)
-        VALUES (#{taskName}, #{taskType}, #{status}, #{priority}, #{timeoutSeconds}, #{inputContent}, #{createdBy})
-</insert>
+    <!-- 插入主任务，主键回填 -->
+    <insert id="insert" parameterType="com.devguard.entity.AgentTask" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO agent_task (task_name, task_type, status, priority, timeout_seconds, input_content, created_by, created_at, updated_at)
+        VALUES (#{taskName}, #{taskType}, #{status}, #{priority}, #{timeoutSeconds}, #{inputContent}, #{createdBy}, #{createdAt}, #{updatedAt})
+    </insert>
 
-<select id="selectById" resultType="com.devguard.entity.AgentTask">
-select * from agent_task where id =#{id}
-</select>
+    <!-- 根据ID查询任务 -->
+    <select id="selectById" resultType="com.devguard.entity.AgentTask">
+        SELECT * FROM agent_task WHERE id = #{id}
+    </select>
 
-<update id="updateById" parameterType="com.devguard.entity.AgentTask">
-update agent_task
-	<set>
-	<if test="status != null">status = #{status},</if>
-            <if test="resultSummary != null">result_summary = #{resultSummary},</if>
+    <!-- 更新任务信息（动态SQL，非空字段才更新） -->
+    <update id="updateById" parameterType="com.devguard.entity.AgentTask">
+        UPDATE agent_task
+        <set>
+            <if test="status != null">status = #{status},</if>
             <if test="startedAt != null">started_at = #{startedAt},</if>
             <if test="finishedAt != null">finished_at = #{finishedAt},</if>
+            <if test="durationMs != null">duration_ms = #{durationMs},</if>
+            <if test="resultSummary != null">result_summary = #{resultSummary},</if>
+            updated_at = NOW()
         </set>
-where id=#{id}
-</update>
+        WHERE id = #{id}
+    </update>
 
-<select id="selectPendingTasks" resultType="com.devguard.entity.AgentTask">
-select * from agent_task
-where status = 'Pending'
-order by priority desc, created_at asc
-</select>
+    <!-- 查询待执行任务，按优先级降序、创建时间升序 -->
+    <select id="selectPendingTasks" resultType="com.devguard.entity.AgentTask">
+        SELECT * FROM agent_task
+        WHERE status = 'PENDING'
+        ORDER BY priority DESC, created_at ASC
+    </select>
+
 </mapper>
