@@ -58,8 +58,9 @@ public Result<List<AgentTask>> listPendingTasks(){
 @PutMapping("/{id}/status")
 public Result<Void> updateStatus(@PathVariable Long id,
                                   @RequestParam String status,
-                                  @RequestParam(required = false) Long durationMs) {
-    taskService.updateTaskStatus(id, status, durationMs);
+                                  @RequestParam(required = false) Long durationMs,
+				@RequestParam(required = false) String resultSummary) {
+    taskService.updateTaskStatus(id, status, durationMs,resultSummary);
     return Result.success(null);
 }
 

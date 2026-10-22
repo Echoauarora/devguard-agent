@@ -20,7 +20,7 @@ class TaskApi:
         if result.get("code") == 200:
             return result.get("data", [])
         return []
-    def update_task_status(self, task_id, status, duration_ms=None):
+    def update_task_status(self, task_id, status, duration_ms=None,result_summary=None):
         """
         更新主任务状态，支持传入总耗时
         开始/结束时间由后端自动生成，保证时钟统一
@@ -29,6 +29,15 @@ class TaskApi:
         params = {"status": status}
         if duration_ms is not None:
             params["durationMs"] = duration_ms
+        if result_summary is not None:
+            params["resultSummary"] = result_summary
+
+        print(f"[API调试] 请求URL: {url}")
+        print(f"[API调试] 传递参数: {params}")
+
+
+
+
         resp = requests.put(url, params=params)
         result = resp.json()
         return result.get("code") == 200

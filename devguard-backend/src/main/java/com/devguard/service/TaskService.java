@@ -73,7 +73,7 @@ public AgentTask getTaskById(Long id){
 //更新任务的状态，自动记录开始/结束，封装状态运转的逻辑
 
 // 更新任务的状态，自动记录开始/结束时间，支持传入总耗时
-public int updateTaskStatus(Long taskId, String status, Long durationMs) {
+public int updateTaskStatus(Long taskId, String status, Long durationMs,String resultSummary) {
 
 // 1. 基础参数校验
         if (taskId == null) {
@@ -103,6 +103,7 @@ public int updateTaskStatus(Long taskId, String status, Long durationMs) {
     task.setId(taskId);
     task.setStatus(status);
     task.setDurationMs(durationMs);
+    task.setResultSummary(resultSummary);
 
     // 状态流转时自动记录对应的时间节点
     if ("RUNNING".equals(status)) {
@@ -115,10 +116,15 @@ public int updateTaskStatus(Long taskId, String status, Long durationMs) {
 }
 
 // 重载方法：兼容只传状态的旧调用
-public int updateTaskStatus(Long taskId, String status) {
-    return updateTaskStatus(taskId, status, null);
+public int updateTaskStatus(Long taskId, String status) {  
+
+  return updateTaskStatus(taskId, status, null);
 }
 
+public int updateTaskStatus(Long taskId,String status,Long durationMs){
+
+	return updateTaskStatus(taskId,status,durationMs,null);
+}
 
 //获取待执行的任务，按照优先级降序，创建时间升序
 
