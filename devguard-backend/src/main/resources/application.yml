@@ -14,7 +14,11 @@ spring:
     url: jdbc:mysql://localhost:3306/devguard?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: root
     password: 7299018
-
+  redis:
+   host: localhost
+   prot: 6379
+   database: 0
+   timeout: 3000ms
 mybatis:
   mapper-locations: classpath:mapper/*.xml
   type-aliases-package: com.devguard.entity
