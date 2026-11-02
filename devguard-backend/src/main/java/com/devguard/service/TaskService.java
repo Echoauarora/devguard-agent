@@ -42,6 +42,12 @@ public class TaskService {
 public Long createTask(AgentTask task){
 	//先填充主任务的默认值
 	task.setStatus("PENDING");
+	if(task.getTaskType() == null){
+		task.setTaskType("code_diagnose");
+	}
+	if(task.getMaxSteps() == null){
+		task.setMaxSteps(6);
+	}
 	task.setCreatedAt(LocalDateTime.now());
 	task.setUpdatedAt(LocalDateTime.now());
 	if(task.getPriority() == null){
@@ -223,5 +229,54 @@ public List<AgentSubTask> initDefaultSubTasks(Long taskId,String taskType){
 subTaskMapper.updateById(subTask);
 }
 
-}
+    public void updateArchiveFields(Long taskId, String inputType, String sandboxPath, String fileTreeJson) {
+        AgentTask t2 = new AgentTask();
+        t2.setId(taskId);
+        t2.setTaskInputType(inputType);
+        t2.setSandboxPath(sandboxPath);
+        t2.setProjectFileTree(fileTreeJson);
+        taskMapper.updateById(t2);
+    }
 
+
+
+    public List<AgentTask> listAllTasks() {
+        return taskMapper.selectAll();
+    }
+
+
+    public void cancelTask(Long taskId, String operator) {
+        AgentTask oldTask = taskMapper.selectById(taskId);
+        if (oldTask == null) throw new RuntimeException("任务不存在: " + taskId);
+        if (FINAL_TASK_STATUSES.contains(oldTask.getStatus())) {
+            throw new RuntimeException("终态任务不可取消: " + oldTask.getStatus());
+        }
+        AgentTask update = new AgentTask();
+        update.setId(taskId);
+        update.setStatus("CANCELED");
+        update.setFinishedAt(java.time.LocalDateTime.now());
+        taskMapper.updateById(update);
+    }
+
+
+    public int updateTaskStatus(Long taskId, String status, Long durationMs, String resultSummary,
+                                 String output, String errorMsg, String errorCode, Integer totalSteps) {
+        AgentTask oldTask = taskMapper.selectById(taskId);
+        if (oldTask == null) return 0;
+        if (FINAL_TASK_STATUSES.contains(oldTask.getStatus()) && !FINAL_TASK_STATUSES.contains(status)) {
+            return 0;
+        }
+        AgentTask update = new AgentTask();
+        update.setId(taskId);
+        update.setStatus(status);
+        update.setDurationMs(durationMs);
+        update.setResultSummary(resultSummary);
+        update.setOutput(output);
+        update.setErrorMsg(errorMsg);
+        update.setTotalSteps(totalSteps);
+        if ("RUNNING".equals(status)) update.setStartedAt(java.time.LocalDateTime.now());
+        if (FINAL_TASK_STATUSES.contains(status)) update.setFinishedAt(java.time.LocalDateTime.now());
+        return taskMapper.updateById(update);
+    }
+
+}

@@ -1,12 +1,9 @@
 from openai import OpenAI
 import os
+import time
 
 
 class LLMClient:
-    """
-    大模型客户端封装
-    兼容 OpenAI 接口格式，支持 DeepSeek
-    """
 
     def __init__(self):
         api_key = os.getenv("LLM_API_KEY")
@@ -16,12 +13,14 @@ class LLMClient:
         if not api_key:
             raise ValueError("请设置环境变量 LLM_API_KEY")
 
-        self.client = OpenAI(api_key=api_key, base_url=base_url)
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            timeout=60.0,
+            max_retries=2,
+        )
 
     def chat(self, prompt: str, system_prompt: str = "你是一个代码工程专家。") -> str:
-        """
-        基础对话调用
-        """
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[
@@ -33,10 +32,6 @@ class LLMClient:
         return response.choices[0].message.content.strip()
 
     def chat_with_function(self, messages: list, tools: list) -> dict:
-        """
-        带工具调用的对话
-        返回：可能是文本回答，也可能是工具调用指令
-        """
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
@@ -46,21 +41,19 @@ class LLMClient:
         )
         message = response.choices[0].message
 
-
-        #把sdk的tool_calls对象转成标准字典，避免格式兼容问题
         tool_calls = None
         if message.tool_calls:
             tool_calls = []
             for tc in message.tool_calls:
                 tool_calls.append({
-                    "id":str(tc.id),
-                    "type":"function",
-                    "function":{
-                        "name":tc.function.name,
-                        "arguments":tc.function.arguments
+                    "id": str(tc.id),
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments
                     }
                 })
-#统一处理：None转空字符串，避免字段缺失
+
         content = message.content if message.content is not None else ""
 
         return {

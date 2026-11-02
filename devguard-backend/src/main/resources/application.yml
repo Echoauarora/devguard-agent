@@ -16,7 +16,7 @@ spring:
     password: 7299018
   redis:
    host: localhost
-   prot: 6379
+   port: 6379
    database: 0
    timeout: 3000ms
 mybatis:

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.devguard.mapper.AgentTraceLogMapper">
+
+    <insert id="insert" parameterType="com.devguard.entity.AgentTraceLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO agent_trace_log (task_id, step_num, event_type, event_detail, duration_ms, extra)
+        VALUES (#{taskId}, #{stepNum}, #{eventType}, #{eventDetail}, #{durationMs}, #{extra})
+    </insert>
+
+    <select id="selectByTaskId" parameterType="long" resultType="com.devguard.entity.AgentTraceLog">
+        SELECT * FROM agent_trace_log WHERE task_id = #{taskId} ORDER BY timestamp ASC
+    </select>
+
+    <select id="selectByTaskIdAndStepNum" resultType="com.devguard.entity.AgentTraceLog">
+        SELECT * FROM agent_trace_log WHERE task_id = #{taskId} AND step_num = #{stepNum} ORDER BY timestamp ASC
+    </select>
+
+</mapper>

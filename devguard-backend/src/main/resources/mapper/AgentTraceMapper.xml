@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.devguard.mapper.AgentTraceMapper">
+
+    <insert id="insert" parameterType="com.devguard.entity.AgentTrace" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO agent_trace (task_id, sub_task_id, trace_type, content, tool_name, cost_ms)
+        VALUES (#{taskId}, #{subTaskId}, #{traceType}, #{content}, #{toolName}, #{costMs})
+    </insert>
+
+    <select id="selectByTaskId" parameterType="long" resultType="com.devguard.entity.AgentTrace">
+        SELECT * FROM agent_trace WHERE task_id = #{taskId} ORDER BY created_at ASC
+    </select>
+
+    <select id="selectBySubTaskId" parameterType="long" resultType="com.devguard.entity.AgentTrace">
+        SELECT * FROM agent_trace WHERE sub_task_id = #{subTaskId} ORDER BY created_at ASC
+    </select>
+
+</mapper>

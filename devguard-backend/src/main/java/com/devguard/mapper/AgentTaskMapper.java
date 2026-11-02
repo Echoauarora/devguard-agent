@@ -11,4 +11,6 @@ public interface AgentTaskMapper{
 	int updateById(AgentTask task);
 
 	List<AgentTask> selectPendingTasks();
+
+        List<AgentTask> selectAll();
 }

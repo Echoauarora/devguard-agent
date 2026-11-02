@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.devguard.mapper.AgentTaskStepMapper">
+
+    <insert id="insert" parameterType="com.devguard.entity.AgentTaskStep" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO agent_task_step (task_id, step_num, step_type, tool_name, input_snapshot, status)
+        VALUES (#{taskId}, #{stepNum}, #{stepType}, #{toolName}, #{inputSnapshot}, #{status})
+    </insert>
+
+    <select id="selectById" resultType="com.devguard.entity.AgentTaskStep">
+        SELECT * FROM agent_task_step WHERE id = #{id}
+    </select>
+
+    <select id="selectByTaskId" parameterType="long" resultType="com.devguard.entity.AgentTaskStep">
+        SELECT * FROM agent_task_step WHERE task_id = #{taskId} ORDER BY step_num ASC
+    </select>
+
+    <select id="selectSuccessByTaskId" parameterType="long" resultType="com.devguard.entity.AgentTaskStep">
+        SELECT * FROM agent_task_step WHERE task_id = #{taskId} AND status = 'SUCCESS' ORDER BY step_num ASC
+    </select>
+
+    <update id="updateById" parameterType="com.devguard.entity.AgentTaskStep">
+        UPDATE agent_task_step
+        <set>
+            <if test="status != null">status = #{status},</if>
+            <if test="outputSnapshot != null">output_snapshot = #{outputSnapshot},</if>
+            <if test="errorMsg != null">error_msg = #{errorMsg},</if>
+            <if test="durationMs != null">duration_ms = #{durationMs},</if>
+            <if test="finishedAt != null">finished_at = #{finishedAt},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+</mapper>
